@@ -2,43 +2,33 @@ package main
 
 import "fmt"
 
-func square(c chan int) {
-	fmt.Println("[square] reading")
-	num := <-c
-	c <- num * num
-}
-
-func cube(c chan int) {
-	fmt.Println("[cube] reading")
-	num := <-c
-	c <- num * num * num
-}
-
 func main() {
-	fmt.Println("[main] main started")
+	jobs := make(chan int, 100)
+	results := make(chan int, 100)
 
-	squareChan := make(chan int)
-	cubeChan := make(chan int)
+	go worker(jobs, results)
+	go worker(jobs, results)
+	go worker(jobs, results)
 
-	go square(squareChan)
-	go cube(cubeChan)
+	for i := 0; i < 100; i++ {
+		jobs <- i
+	}
+	close(jobs)
 
-	n := 5
-	fmt.Println("[main] sent n to squareChan")
+	for j := 0; j < 100; j++ {
+		fmt.Println(<-results)
+	}
+}
 
-	squareChan <- n
+func worker(jobs <-chan int, results chan<- int) {
+	for n := range jobs {
+		results <- fib(n)
+	}
+}
 
-	fmt.Println("[main] resuming")
-	fmt.Println("[main] sent n to cubeChan")
-
-	cubeChan <- n
-
-	fmt.Println("[main] resuming")
-	fmt.Println("[main] reading from channels")
-
-	squareVal, cubeVal := <-squareChan, <-cubeChan
-	sum := squareVal + cubeVal
-
-	fmt.Println("[main] sum of square and cube is: ", sum)
-	fmt.Println("[main] main() stopped")
+func fib(n int) int {
+	if n <= 1 {
+		return n
+	}
+	return fib(n-1) + fib(n-2)
 }
